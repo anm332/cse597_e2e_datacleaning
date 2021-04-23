@@ -2,7 +2,7 @@
 title: "e2e_preprocessing_cleaning_anm"
 author: "Amanda Moeller"
 date: "4/11/2021"
-output: html_document
+output: rmarkdown::github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -12,18 +12,14 @@ knitr::opts_chunk$set(echo = TRUE)
 Packages:
 ```{r}
 library(tm)
-#library(quanteda)
-#library(tokenizers)
 library(tidyr)
+library(dplyr)
+library(irr)
 ```
-
-Bring in the data:
+Bring in the data, clean it up
 ```{r}
-devset <-read.csv("/Users/amandamoeller/Desktop/CSE 597 NLP/final project/e2e-dataset/devset.csv")
-testset_w_refs <- read.csv("/Users/amandamoeller/Desktop/CSE 597 NLP/final project/e2e-dataset/testset_w_refs.csv")
-
-
-# combine devset and testset_w_refs, clean, split 70/30
+devset <-read.csv("https://raw.githubusercontent.com/anm332/cse597_e2e_datacleaning/main/devset.csv")
+testset_w_refs <- read.csv("https://raw.githubusercontent.com/anm332/cse597_e2e_datacleaning/main/testset_w_refs.csv")
 
 # create combined df:
 dev_test_combo <- rbind(devset, testset_w_refs)
@@ -34,42 +30,41 @@ df <- separate(data = df, col = mr, into = c("1", "2", "3", "4", "5", "6", "7"),
 
 # separate by rows
 as_tibble(df)
-
 df$`1` <- as.character(df$`1`)
 
 
-data_list <- split(df, f = df$`1`)                    # Split data by restaurant name
-data_list                                             # Print list of datasets
+data_list <- split(df, f = df$`1`) # Split data by restaurant name
+head(data_list) # Print list of datasets
+```
 
 
+Some restaurants' reviews are more unanimous than others 
+
+If we draw more of the training data from restaurants with more variability, the computer will be able to better generate the reference sentences
+
+The kappa statistic is an indicator of interrater reliability, which represents the extent to which the data is consistent. 
+
+Lower kappa score = there's more variability in these ratings (i.e., more disagreement as to a restaurant's eatType, familyFriendly, area, etc.)
+
+Higher kappa score = less variability in the ratings (i.e., data more consistently reports the eatType, familyFriendly, area, etc.) 
+
+So below I calculated the kappa statistic for each restaurant's dataset:
+
+```{r}
+## dimensions:
 # 120, 220, 18, 228, 233, 173, 292 
 # 243, 468, 222, 240, 6, 78, 32, 105, 
 # 212, 858, 679, 263, 662, 709, 88, 912
 # 581, 262, 991, 96, 342, 32
 
-# sorted:
+# dims sorted:
 # 991, 912, 858, 709, 679, 662, 581, 468, 342, 292, 263, 262, 243, 240, 233, 228, 222, 220, 212, 173, 120, 105, 96, 88, 78, 32, 32, 18, 6
 
 list2env(data_list,envir=.GlobalEnv) # saves dataframes to environment
 
-wrestlers_991 <- `name[The Wrestlers`
 
-wrestlers_991 
-wrestlers_991$famfriend <- wrestlers_991$`3` # column 3 is familyFrindly[yes] and [no]
-wrestlers_991$famfriend <- as.factor(wrestlers_991$famfriend)
-wrestlers_991$famfriend # 352:991 are out of order (shows food type, not fam friend)
-
-loch_6 <- `name[Loch Fyne`
-loch_6 # eatType: 3 say coffee shop, 3 say pub
-loch_6$eatType <- as.factor(loch_6$`2`)
-loch_6$eatType
-
-
-
-
-# RELIABILITY STUFF BELOW:
+# RELIABILITY STUFF BELOW: ################################
 # ### just a note: number of raters here refers to the number of reviews of a single restaurant
-
 
 # LOCH INTERRATER RELIABILITY:
 loch_6$eatType <- factor(loch_6$`2`, levels = as.character(unique(loch_6$`2`))) # Convert character vector to factor
@@ -79,12 +74,7 @@ as.numeric(loch_6$eatType) # Convert to numeric   # 1 = coffee shop, 2 = pub
 loch_6_t <- as.data.frame(t(loch_6)) # convert columns to rows
 loch_6_t
 
-library(irr)
 a <- kappam.fleiss(loch_6_t[, 1:6]) # fleiss kappa = 0.47
-
-
-# now do the above ^ for all restaurants:
-
 
 # ALIMENTUM INTERRATER RELIABILITY: ############################################
 alimen_8 <- `name[Alimentum`
@@ -94,7 +84,7 @@ alimen_8 <- lapply(alimen_8, factor)  # convert all to factors
 sapply(alimen_8, class)
 alimen_8 <- as.data.frame(alimen_8)
 
-library(dplyr) # remove refs 
+# remove refs 
 select(alimen_8, -c(8))
 
 
@@ -112,7 +102,7 @@ aromi_220 <- lapply(aromi_220, factor)  # convert all to factors
 sapply(aromi_220, class)
 aromi_220 <- as.data.frame(aromi_220)
 
-library(dplyr) # remove refs 
+# remove refs 
 select(aromi_220, -c(8))
 
 aromi_220_t <- as.data.frame(t(aromi_220)) # transpose
@@ -129,7 +119,7 @@ bibi_18 <- lapply(bibi_18, factor)  # convert all to factors
 sapply(bibi_18 , class)
 bibi_18 <- as.data.frame(bibi_18)
 
-library(dplyr) # remove refs 
+# remove refs 
 select(bibi_18, -c(8))
 
 
@@ -151,7 +141,7 @@ blue_228 <- as.data.frame(blue_228)
 blue_228_t <- as.data.frame(t(blue_228)) # transpose
 blue_228_t
 
-library(dplyr) # remove refs 
+# remove refs 
 select(blue_228, -c(8))
 
 # kappa
@@ -170,7 +160,7 @@ brown_233 <- as.data.frame(brown_233)
 brown_233_t <- as.data.frame(t(brown_233)) # transpose
 brown_233_t
 
-library(dplyr) # remove refs 
+# remove refs 
 select(brown_233, -c(8))
 
 # kappa
@@ -188,7 +178,7 @@ clowns_173 <- as.data.frame(clowns_173)
 clowns_173_t <- as.data.frame(t(clowns_173)) # transpose
 clowns_173_t
 
-library(dplyr) # remove refs 
+# remove refs 
 select(clowns_173, -c(8))
 
 # kappa
@@ -206,7 +196,7 @@ cocum_292 <- as.data.frame(cocum_292)
 cocum_292_t <- as.data.frame(t(cocum_292)) # transpose
 cocum_292_t
 
-library(dplyr) # remove refs 
+# remove refs 
 cocum_292 <- select(cocum_292, -c(8))
 
 # kappa
@@ -224,7 +214,7 @@ cotto_243 <- as.data.frame(cotto_243)
 cotto_243_t <- as.data.frame(t(cotto_243)) # transpose
 cotto_243_t
 
-library(dplyr) # remove refs 
+# remove refs 
 cotto_243 <- select(cotto_243, -c(8))
 
 # kappa
@@ -239,7 +229,7 @@ fitz <- lapply(fitz, factor)  # convert all to factors
 sapply(fitz, class)
 fitz <- as.data.frame(fitz)
 
-library(dplyr) # remove refs 
+# remove refs 
 fitz <- select(fitz, -c(8))
 
 fitz_t <- as.data.frame(t(fitz)) # transpose
@@ -544,10 +534,6 @@ aa <- aa$value
 ab <- ab$value
 ac <- ac$value
 
-
-
-
-
 id <- c("Loch Fyne", "Alimentum", "Aromi", "Bibimbap House", "Blue Spice", "Browns Cambridge",
         "Clowns", "Cocum", "Cotto", "Fitzabilities", "Giraffe", "Green Man", "Midsummer House",
         "Strada", "Taste of Cambridge", "The Cambridge Blue", "The Cricketers", "The Eagle",
@@ -563,14 +549,14 @@ mean(data$kappa) # mean=0.51
 sd(data$kappa) # mean=0.11
 
 # 1 sd above the mean = 0.62 +
-# Midsummer House, Travellers Rest Beefeater, The Plough, The Cambridge Blue, Taste of Cambridge 
+# Midsummer House=m, Travellers Rest Beefeater=aa, The Plough=v, The Cambridge Blue=p, Taste of Cambridge=0 
+
+df$`1` <-  as.factor(df$`1`)
 
 # 1 sd below the mean = 0.40 - 
 # The Punter, The Cricketers, The Wrestlers, The Mill, The Eagle, The Vaults, Blue Spice
 
-
-data <- data[order(kappa),]
-data
+print(data[order(kappa),])
 ```
 
 
@@ -590,242 +576,18 @@ data$newkappa <- ifelse(data$kappa > 0.62, 1, 0)
 data
 data$newkappa <- as.factor(data$newkappa)
 
-
-g <- ggplot(data=data,
-            aes(x=id, y=kappa) +
-  geom_bar(sta='identity', aes(fill = data$newkappa)) +
-  scale_fill_gradient2(low='pink', mid='cyan', high='green'))
-
-g
-
-
 data$id <- as.character(data$id) # character
 class(data$kappa) # numeric
 data$newkappa <- as.numeric(data$newkappa) # numeric
 
 range(data$kappa)
 
-
 library(devtools)
 devtools::install_github("stefan-schroedl/plotluck")
 library(plotluck)
 
-
-plotluck(data, kappa~id)
-
+print(plotluck(data, kappa~id))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Split 70/30
-```{r}
-
-smp_size <- floor(0.7 * nrow(dev_test_combo))
-
-set.seed(1234) # set the seed for reproducibility
-train_ind <- sample(seq_len(nrow(dev_test_combo)), size = smp_size)
-
-train70 <- dev_test_combo[train_ind, ] # 70% training df 
-test30 <- dev_test_combo[-train_ind, ] # 30% testing df 
-
-```
-
-Check out the interrater reliability of restaurant reviews in dev_test_combo
-```{r}
-dev_test_combo
-
-# First split into more columns on comma
-df <- data.frame(do.call('rbind', strsplit(as.character(dev_test_combo$mr),',',fixed=TRUE)))
-
-
-df <- data.frame(x = c("x", "x y", "x y z", NA))
-df %>% separate(x, c("a", "b"))
-
-library()
-df <- dev_test_combo %>% separate(mr, 
-                c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
-
-
-
-
-df <- data.frame(do.call('rbind', strsplit(as.character(dev_test_combo),',',fixed=TRUE)))
-df
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Clean it up
-```{r}
-# text = dev_refs
-dev_refs <- devset$ref # pull out the text column
-
-# normalize:
-dev_refs <- tolower(dev_refs)
-dev_refs <- removePunctuation(dev_refs)
-
-devset["cleanrefs"] <- dev_refs # add clean text column back to df
-head(devset$cleanrefs, 10)
-
-
-# add <START> and <END> tokens
-devset$cleanrefs <- 
-  paste("<START>", devset$cleanrefs,
-        sep="_")
-
-devset[-length(devset)] <- paste0(devset[-length(devset)], '<END>')
-strsplit(paste(devset, collapse='<END> '), ' ')[[1]]     
-
-
-```
-
-
-# Input = delexicalized MRs (different from tgen)
-
-Create corpus
-```{r}
-# devset refs corpus:
-dev_corpus_refs <- Corpus(VectorSource(devset$ref))
-dev_corpus_refs
-
-```
-
-
-Normalization: lowercase the words, remove punctuation and numbers, remove whitespace
-```{r}
-# devset refs normalize:
-dev_corpus_refs <- tolower(dev_corpus_refs)
-dev_corpus_refs <- removeNumbers(dev_corpus_refs)
-dev_corpus_refs <- removePunctuation(dev_corpus_refs)
-dev_corpus_refs <- stripWhitespace(dev_corpus_refs)
-
-# remove backslashes:
-## convert corpus to string
-toString(dev_corpus_refs)
-
-
-```
-
-
-Add <start> and <end> tokens to beginning, end of each sentence 
-```{r}
-
-
-
-```
-
-
-Replace all values in MRs with corresponding semantic name of the slot (delexicalization)
-
-
-
-
-https://datamathstat.wordpress.com/2019/10/25/text-preprocessing-for-nlp-and-machine-learning-using-r/
-```{r}
-text_corpus <- (VectorSource(devset))
-   text_corpus <- Corpus(text_corpus)
-   summary(text_corpus)
-   
-##Tokenization: Split a text into single word terms called "unigrams" 
-text_corpus_clean<-Boost_tokenizer(text_corpus)
- # text_corpus_clean[[5]]$content
-
-#Normalization: lowercase the words and remove punctuation and numbers
-text_corpus_clean<-tm_map(text_corpus , content_transformer(tolower))
-text_corpus_clean <- tm_map(text_corpus_clean, removePunctuation)
-text_corpus_clean <- tm_map(text_corpus_clean, removeNumbers)
-text_corpus_clean <- tm_map(text_corpus_clean, stripWhitespace)
-
-##Remove stopwords and custom stopwords
-text_corpus_clean <- c(stopwords('english'), "a", "b") 
-
-
-
-```
-
-
-
-
-
-Turn data into a corpus for text processing
-```{r}
-
-#devset corpus:
-devset_corpus <- corpus(devset, text_field = "ref")
-print(devset_corpus)
-summary(devset_corpus, 10)
-
-
-```
-
-Tokenization of devset
-```{r}
-devset_corpus_tok <- tokenize_words(devset_corpus)
-devset_corpus_clean <- devset_corpus_tok
-
-devset_corpus_clean
-```
-
-Normalize devset
-  + all lower case
-  + remove punctuation, numbers, white spaces
-  + remove stop words, sparce terms
-```{r}
-# devset_corpus_clean <- tolower(devset_corpus_clean)
-devset_corpus_clean <- removePunctuation(devset_corpus_clean)
-devset_corpus_clean <- removeNumbers(devset_corpus_clean)
-devset_corpus_clean <- stripWhitespace(devset_corpus_clean)
-devset_corpus_clean <- removeWords(devset_corpus_clean, stopwords('en'))
-```
-
-
-Visualize the pre-processed data
-```{r}
-dtm <- DocumentTermMatrix(devset_corpus_clean)
-
-
-```
-
 
 
 
