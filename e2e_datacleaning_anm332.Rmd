@@ -1,0 +1,843 @@
+---
+title: "e2e_preprocessing_cleaning_anm"
+author: "Amanda Moeller"
+date: "4/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Packages:
+```{r}
+library(tm)
+#library(quanteda)
+#library(tokenizers)
+library(tidyr)
+```
+
+Bring in the data:
+```{r}
+devset <-read.csv("/Users/amandamoeller/Desktop/CSE 597 NLP/final project/e2e-dataset/devset.csv")
+testset_w_refs <- read.csv("/Users/amandamoeller/Desktop/CSE 597 NLP/final project/e2e-dataset/testset_w_refs.csv")
+
+
+# combine devset and testset_w_refs, clean, split 70/30
+
+# create combined df:
+dev_test_combo <- rbind(devset, testset_w_refs)
+
+# split mr column on comma
+df <- data.frame(dev_test_combo)
+df <- separate(data = df, col = mr, into = c("1", "2", "3", "4", "5", "6", "7"), sep = "],")
+
+# separate by rows
+as_tibble(df)
+
+df$`1` <- as.character(df$`1`)
+
+
+data_list <- split(df, f = df$`1`)                    # Split data by restaurant name
+data_list                                             # Print list of datasets
+
+
+# 120, 220, 18, 228, 233, 173, 292 
+# 243, 468, 222, 240, 6, 78, 32, 105, 
+# 212, 858, 679, 263, 662, 709, 88, 912
+# 581, 262, 991, 96, 342, 32
+
+# sorted:
+# 991, 912, 858, 709, 679, 662, 581, 468, 342, 292, 263, 262, 243, 240, 233, 228, 222, 220, 212, 173, 120, 105, 96, 88, 78, 32, 32, 18, 6
+
+list2env(data_list,envir=.GlobalEnv) # saves dataframes to environment
+
+wrestlers_991 <- `name[The Wrestlers`
+
+wrestlers_991 
+wrestlers_991$famfriend <- wrestlers_991$`3` # column 3 is familyFrindly[yes] and [no]
+wrestlers_991$famfriend <- as.factor(wrestlers_991$famfriend)
+wrestlers_991$famfriend # 352:991 are out of order (shows food type, not fam friend)
+
+loch_6 <- `name[Loch Fyne`
+loch_6 # eatType: 3 say coffee shop, 3 say pub
+loch_6$eatType <- as.factor(loch_6$`2`)
+loch_6$eatType
+
+
+
+
+# RELIABILITY STUFF BELOW:
+# ### just a note: number of raters here refers to the number of reviews of a single restaurant
+
+
+# LOCH INTERRATER RELIABILITY:
+loch_6$eatType <- factor(loch_6$`2`, levels = as.character(unique(loch_6$`2`))) # Convert character vector to factor
+
+as.numeric(loch_6$eatType) # Convert to numeric   # 1 = coffee shop, 2 = pub
+
+loch_6_t <- as.data.frame(t(loch_6)) # convert columns to rows
+loch_6_t
+
+library(irr)
+a <- kappam.fleiss(loch_6_t[, 1:6]) # fleiss kappa = 0.47
+
+
+# now do the above ^ for all restaurants:
+
+
+# ALIMENTUM INTERRATER RELIABILITY: ############################################
+alimen_8 <- `name[Alimentum`
+alimen_8 
+
+alimen_8 <- lapply(alimen_8, factor)  # convert all to factors
+sapply(alimen_8, class)
+alimen_8 <- as.data.frame(alimen_8)
+
+library(dplyr) # remove refs 
+select(alimen_8, -c(8))
+
+
+alimen_8_t <- as.data.frame(t(alimen_8)) # transpose
+alimen_8_t
+
+# kappa
+b <- kappam.fleiss(alimen_8_t[, 1:8]) # kappa = 0.57
+
+# AROMI INTERRATER RELIABILITY: ############################################
+aromi_220 <- `name[Aromi`
+aromi_220 
+
+aromi_220 <- lapply(aromi_220, factor)  # convert all to factors
+sapply(aromi_220, class)
+aromi_220 <- as.data.frame(aromi_220)
+
+library(dplyr) # remove refs 
+select(aromi_220, -c(8))
+
+aromi_220_t <- as.data.frame(t(aromi_220)) # transpose
+aromi_220_t
+
+# kappa
+c <- kappam.fleiss(aromi_220_t[, 1:220]) # kappa = 0.55
+
+# BIBIMBAP INTERRATER RELIABILITY: ############################################
+bibi_18 <- `name[Bibimbap House`
+bibi_18 
+
+bibi_18 <- lapply(bibi_18, factor)  # convert all to factors
+sapply(bibi_18 , class)
+bibi_18 <- as.data.frame(bibi_18)
+
+library(dplyr) # remove refs 
+select(bibi_18, -c(8))
+
+
+bibi_18_t <- as.data.frame(t(bibi_18)) # transpose
+bibi_18_t
+
+# kappa
+d <- kappam.fleiss(bibi_18_t[, 1:18]) # kappa = 0.56
+
+# BLUE SPICE INTERRATER RELIABILITY: ############################################
+blue_228 <- `name[Blue Spice`
+blue_228 
+
+blue_228 <- lapply(blue_228, factor)  # convert all to factors
+sapply(blue_228 , class)
+blue_228 <- as.data.frame(blue_228)
+
+
+blue_228_t <- as.data.frame(t(blue_228)) # transpose
+blue_228_t
+
+library(dplyr) # remove refs 
+select(blue_228, -c(8))
+
+# kappa
+e <- kappam.fleiss(blue_228_t[, 1:228]) # kappa = 0.39
+
+
+# BROWNS CAMBRIDGE INTERRATER RELIABILITY: ############################################
+brown_233 <- `name[Browns Cambridge`
+brown_233 
+
+brown_233 <- lapply(brown_233, factor)  # convert all to factors
+sapply(brown_233 , class)
+brown_233 <- as.data.frame(brown_233)
+
+
+brown_233_t <- as.data.frame(t(brown_233)) # transpose
+brown_233_t
+
+library(dplyr) # remove refs 
+select(brown_233, -c(8))
+
+# kappa
+f <- kappam.fleiss(brown_233_t[, 1:233]) # kappa = 0.57
+
+# CLOWNS INTERRATER RELIABILITY: ############################################
+clowns_173<- `name[Clowns`
+clowns_173
+
+clowns_173 <- lapply(clowns_173, factor)  # convert all to factors
+sapply(clowns_173, class)
+clowns_173 <- as.data.frame(clowns_173)
+
+
+clowns_173_t <- as.data.frame(t(clowns_173)) # transpose
+clowns_173_t
+
+library(dplyr) # remove refs 
+select(clowns_173, -c(8))
+
+# kappa
+g <- kappam.fleiss(clowns_173_t[, 1:173]) # kappa = 0.47
+
+# COCUM INTERRATER RELIABILITY: ############################################
+cocum_292 <- `name[Cocum`
+cocum_292
+
+cocum_292 <- lapply(cocum_292, factor)  # convert all to factors
+sapply(cocum_292, class)
+cocum_292 <- as.data.frame(cocum_292)
+
+
+cocum_292_t <- as.data.frame(t(cocum_292)) # transpose
+cocum_292_t
+
+library(dplyr) # remove refs 
+cocum_292 <- select(cocum_292, -c(8))
+
+# kappa
+h <- kappam.fleiss(cocum_292_t[, 1:292]) # kappa = 0.49
+
+# COTTO INTERRATER RELIABILITY: ############################################
+cotto_243 <- `name[Cotto`
+cotto_243
+
+cotto_243 <- lapply(cotto_243, factor)  # convert all to factors
+sapply(cotto_243, class)
+cotto_243 <- as.data.frame(cotto_243)
+
+
+cotto_243_t <- as.data.frame(t(cotto_243)) # transpose
+cotto_243_t
+
+library(dplyr) # remove refs 
+cotto_243 <- select(cotto_243, -c(8))
+
+# kappa
+i <- kappam.fleiss(cotto_243_t[, 1:243]) # kappa = 0.55
+
+
+# FITZBILLIES INTERRATER RELIABILITY: ############################################
+fitz <- `name[Fitzbillies`
+fitz
+
+fitz <- lapply(fitz, factor)  # convert all to factors
+sapply(fitz, class)
+fitz <- as.data.frame(fitz)
+
+library(dplyr) # remove refs 
+fitz <- select(fitz, -c(8))
+
+fitz_t <- as.data.frame(t(fitz)) # transpose
+fitz_t
+
+# kappa
+j <- kappam.fleiss(fitz_t[, 1:468]) # kappa = 0.51
+
+# GIRAFFE INTERRATER RELIABILITY: ############################################
+giraffe <- `name[Giraffe`
+
+giraffe <- lapply(giraffe, factor)  # convert all to factors
+giraffe <- as.data.frame(giraffe)
+
+giraffe <- select(giraffe, -c(8)) # remove refs 
+
+giraffe_t <- as.data.frame(t(giraffe)) # transpose
+
+# kappa
+k <- kappam.fleiss(giraffe_t[, 1:222]) # kappa = 0.55
+
+# GREEN MAN INTERRATER RELIABILITY: ############################################
+green <- `name[Green Man`
+
+green <- lapply(green, factor)  # convert all to factors
+green <- as.data.frame(green)
+
+green <- select(green, -c(8)) # remove refs 
+
+green <- as.data.frame(t(green)) # transpose
+
+# kappa
+l <- kappam.fleiss(green[, 1:240]) # kappa = 0.56
+
+# LOCH FYNE INTERRATER RELIABILITY: ############################################
+#loch <- `name[Loch Fyne`
+
+#loch <- lapply(loch, factor)  # convert all to factors
+#loch <- as.data.frame(loch)
+
+#loch <- select(loch, -c(8)) # remove refs 
+
+#loch <- as.data.frame(t(loch)) # transpose
+
+# kappa
+#m <- kappam.fleiss(loch[, 1:6]) # kappa = 0.72
+
+# Midsummer House INTERRATER RELIABILITY: ############################################
+mids <- `name[Midsummer House`
+
+mids <- lapply(mids, factor)  # convert all to factors
+mids <- as.data.frame(mids)
+
+mids <- select(mids, -c(8)) # remove refs 
+
+mids <- as.data.frame(t(mids)) # transpose
+
+# kappa
+m <- kappam.fleiss(mids[, 1:78]) # kappa = 0.63
+
+# Strada INTERRATER RELIABILITY: ############################################
+strada <- `name[Strada`
+
+strada <- lapply(strada, factor)  # convert all to factors
+strada <- as.data.frame(strada)
+
+strada <- select(strada, -c(8)) # remove refs 
+
+strada <- as.data.frame(t(strada)) # transpose
+
+# kappa
+n <- kappam.fleiss(strada[, 1:32]) # kappa = 0.50
+
+# Taste of Cambridge INTERRATER RELIABILITY: ############################################
+taste <- `name[Taste of Cambridge`
+
+taste <- lapply(taste, factor)  # convert all to factors
+taste<- as.data.frame(taste)
+
+taste <- select(taste, -c(8)) # remove refs 
+
+taste <- as.data.frame(t(taste)) # transpose
+
+# kappa
+o <- kappam.fleiss(taste[, 1:105]) # kappa = 0.76
+
+# The Cambridge Blue INTERRATER RELIABILITY: ############################################
+camblue <- `name[The Cambridge Blue`
+
+camblue <- lapply(camblue, factor)  # convert all to factors
+camblue<- as.data.frame(camblue)
+
+camblue <- select(camblue, -c(8)) # remove refs 
+
+camblue <- as.data.frame(t(camblue)) # transpose
+
+# kappa
+p <- kappam.fleiss(camblue[, 1:212]) # kappa = 0.73
+
+# The Cricketers INTERRATER RELIABILITY: ############################################
+cricket <- `name[The Cricketers`
+
+cricket <- lapply(cricket, factor)  # convert all to factors
+cricket<- as.data.frame(cricket)
+
+cricket <- select(cricket, -c(8)) # remove refs 
+
+cricket <- as.data.frame(t(cricket)) # transpose
+
+# kappa
+q <- kappam.fleiss(cricket[, 1:858]) # kappa = 0.34
+
+# The Eagle INTERRATER RELIABILITY: ############################################
+eagle <- `name[The Eagle`
+
+eagle <- lapply(eagle, factor)  # convert all to factors
+eagle <- as.data.frame(eagle)
+
+eagle <- select(eagle, -c(8)) # remove refs 
+
+eagle <- as.data.frame(t(eagle)) # transpose
+
+# kappa
+r <- kappam.fleiss(eagle[, 1:679]) # kappa = 0.37
+
+# The Golden Palace INTERRATER RELIABILITY: ############################################
+gold <- `name[The Golden Palace`
+
+gold <- lapply(gold, factor)  # convert all to factors
+gold <- as.data.frame(gold)
+
+gold <- select(gold, -c(8)) # remove refs 
+
+gold <- as.data.frame(t(gold)) # transpose
+
+# kappa
+s <- kappam.fleiss(gold[, 1:263]) # kappa = 0.52
+
+
+# The Mill INTERRATER RELIABILITY: ############################################
+mill <- `name[The Mill`
+
+mill <- lapply(mill, factor)  # convert all to factors
+mill <- as.data.frame(mill)
+
+mill <- select(mill, -c(8)) # remove refs 
+
+mill <- as.data.frame(t(mill)) # transpose
+
+# kappa
+t <- kappam.fleiss(mill[, 1:662]) # kappa = 0.34
+
+# The Phoenix INTERRATER RELIABILITY: ############################################
+phx <- `name[The Phoenix`
+
+phx <- lapply(phx, factor)  # convert all to factors
+phx <- as.data.frame(phx)
+
+phx <- select(phx, -c(8)) # remove refs 
+
+phx <- as.data.frame(t(phx)) # transpose
+
+# kappa
+u <- kappam.fleiss(phx[, 1:709]) # kappa = 0.49
+
+# The Plough INTERRATER RELIABILITY: ############################################
+plough <- `name[The Plough`
+
+plough <- lapply(plough, factor)  # convert all to factors
+plough <- as.data.frame(plough)
+
+plough <- select(plough, -c(8)) # remove refs 
+
+plough <- as.data.frame(t(plough)) # transpose
+
+# kappa
+v <- kappam.fleiss(plough[, 1:88]) # kappa = 0.66
+
+# The Punter INTERRATER RELIABILITY: ############################################
+punt <- `name[The Punter`
+
+punt <- lapply(punt, factor)  # convert all to factors
+punt <- as.data.frame(punt)
+
+punt <- select(punt, -c(8)) # remove refs 
+
+punt <- as.data.frame(t(punt)) # transpose
+
+# kappa
+w <- kappam.fleiss(punt[, 1:912]) # kappa = 0.33
+
+
+# The Vaults INTERRATER RELIABILITY: ############################################
+vault <- `name[The Vaults`
+
+vault <- lapply(vault, factor)  # convert all to factors
+vault <- as.data.frame(vault)
+
+vault <- select(vault, -c(8)) # remove refs 
+
+vault <- as.data.frame(t(vault)) # transpose
+
+# kappa
+x <- kappam.fleiss(vault[, 1:581]) # kappa = 0.37
+
+
+# The Waterman INTERRATER RELIABILITY: ############################################
+water <- `name[The Waterman`
+
+water <- lapply(water, factor)  # convert all to factors
+water <- as.data.frame(water)
+
+water <- select(water, -c(8)) # remove refs 
+
+water <- as.data.frame(t(water)) # transpose
+
+# kappa
+y <- kappam.fleiss(water[, 1:262]) # kappa = 0.58
+
+# The Wrestlers INTERRATER RELIABILITY: ############################################
+wrestle <- `name[The Wrestlers`
+
+wrestle <- lapply(wrestle, factor)  # convert all to factors
+wrestle <- as.data.frame(wrestle)
+
+wrestle <- select(wrestle, -c(8)) # remove refs 
+
+wrestle <- as.data.frame(t(wrestle)) # transpose
+
+# kappa
+z <- kappam.fleiss(wrestle[, 1:991]) # kappa = 0.35
+
+# Travellers Rest Beefeater INTERRATER RELIABILITY: ############################################
+trb <- `name[Travellers Rest Beefeater`
+
+trb <- lapply(trb, factor)  # convert all to factors
+trb <- as.data.frame(trb)
+
+trb <- select(trb, -c(8)) # remove refs 
+
+trb <- as.data.frame(t(trb)) # transpose
+
+# kappa
+aa <- kappam.fleiss(trb[, 1:96]) # kappa = 0.65
+
+
+# Wildwood Rest Beefeater INTERRATER RELIABILITY: ############################################
+wild <- `name[Wildwood`
+
+wild <- lapply(wild , factor)  # convert all to factors
+wild <- as.data.frame(wild)
+
+wild <- select(wild, -c(8)) # remove refs 
+
+wild <- as.data.frame(t(wild)) # transpose
+
+# kappa
+ab <- kappam.fleiss(wild[, 1:342]) # kappa = 0.41
+
+# Zizzi INTERRATER RELIABILITY: ############################################
+ziz <- `name[Zizzi`
+
+ziz <- lapply(ziz, factor)  # convert all to factors
+ziz <- as.data.frame(ziz)
+
+ziz <- select(ziz, -c(8)) # remove refs 
+
+ziz <- as.data.frame(t(ziz)) # transpose
+
+# kappa
+ac <- kappam.fleiss(ziz[, 1:32]) # kappa = 0.48
+
+
+### Now put all the lists of kappas together
+a <- a$value
+b <- b$value
+c <- c$value
+d <- d$value
+e <- e$value
+f <- f$value
+g <- g$value
+h <- h$value
+i <- i$value
+j <- j$value
+k <- k$value
+l <- l$value
+m <- m$value
+n <- n$value
+o <- o$value
+p <- p$value
+q <- q$value
+r <- r$value
+s <- s$value
+t <- t$value
+u <- u$value
+v <- v$value
+w <- w$value
+x <- x$value
+y <- y$value
+z <- z$value
+aa <- aa$value
+ab <- ab$value
+ac <- ac$value
+
+
+
+
+
+id <- c("Loch Fyne", "Alimentum", "Aromi", "Bibimbap House", "Blue Spice", "Browns Cambridge",
+        "Clowns", "Cocum", "Cotto", "Fitzabilities", "Giraffe", "Green Man", "Midsummer House",
+        "Strada", "Taste of Cambridge", "The Cambridge Blue", "The Cricketers", "The Eagle",
+        "The Golden Palace", "The Mill", "The Phoenix", "The Plough", "The Punter", "The Vaults",
+        "The Waterman", "The Wrestlers", "Travellers Rest Beefeater", "Wildwood", "Zizzi")
+
+kappa <- c(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z, aa, ab, ac)
+
+data <- data.frame(id, kappa)
+data
+
+mean(data$kappa) # mean=0.51
+sd(data$kappa) # mean=0.11
+
+# 1 sd above the mean = 0.62 +
+# Midsummer House, Travellers Rest Beefeater, The Plough, The Cambridge Blue, Taste of Cambridge 
+
+# 1 sd below the mean = 0.40 - 
+# The Punter, The Cricketers, The Wrestlers, The Mill, The Eagle, The Vaults, Blue Spice
+
+
+data <- data[order(kappa),]
+data
+```
+
+
+Data viz
+```{r}
+library(ggplot2)
+library(RColorBrewer)
+
+data <- as_tibble(data)
+data$id <- as.factor(data$id)
+data$kappa <- as.numeric(data$kappa)
+
+# add column with SD placement
+
+data$newkappa <- ifelse(data$kappa < 0.41, -1, 0)
+data$newkappa <- ifelse(data$kappa > 0.62, 1, 0)
+data
+data$newkappa <- as.factor(data$newkappa)
+
+
+g <- ggplot(data=data,
+            aes(x=id, y=kappa) +
+  geom_bar(sta='identity', aes(fill = data$newkappa)) +
+  scale_fill_gradient2(low='pink', mid='cyan', high='green'))
+
+g
+
+
+data$id <- as.character(data$id) # character
+class(data$kappa) # numeric
+data$newkappa <- as.numeric(data$newkappa) # numeric
+
+range(data$kappa)
+
+
+library(devtools)
+devtools::install_github("stefan-schroedl/plotluck")
+library(plotluck)
+
+
+plotluck(data, kappa~id)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Split 70/30
+```{r}
+
+smp_size <- floor(0.7 * nrow(dev_test_combo))
+
+set.seed(1234) # set the seed for reproducibility
+train_ind <- sample(seq_len(nrow(dev_test_combo)), size = smp_size)
+
+train70 <- dev_test_combo[train_ind, ] # 70% training df 
+test30 <- dev_test_combo[-train_ind, ] # 30% testing df 
+
+```
+
+Check out the interrater reliability of restaurant reviews in dev_test_combo
+```{r}
+dev_test_combo
+
+# First split into more columns on comma
+df <- data.frame(do.call('rbind', strsplit(as.character(dev_test_combo$mr),',',fixed=TRUE)))
+
+
+df <- data.frame(x = c("x", "x y", "x y z", NA))
+df %>% separate(x, c("a", "b"))
+
+library()
+df <- dev_test_combo %>% separate(mr, 
+                c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"))
+
+
+
+
+df <- data.frame(do.call('rbind', strsplit(as.character(dev_test_combo),',',fixed=TRUE)))
+df
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Clean it up
+```{r}
+# text = dev_refs
+dev_refs <- devset$ref # pull out the text column
+
+# normalize:
+dev_refs <- tolower(dev_refs)
+dev_refs <- removePunctuation(dev_refs)
+
+devset["cleanrefs"] <- dev_refs # add clean text column back to df
+head(devset$cleanrefs, 10)
+
+
+# add <START> and <END> tokens
+devset$cleanrefs <- 
+  paste("<START>", devset$cleanrefs,
+        sep="_")
+
+devset[-length(devset)] <- paste0(devset[-length(devset)], '<END>')
+strsplit(paste(devset, collapse='<END> '), ' ')[[1]]     
+
+
+```
+
+
+# Input = delexicalized MRs (different from tgen)
+
+Create corpus
+```{r}
+# devset refs corpus:
+dev_corpus_refs <- Corpus(VectorSource(devset$ref))
+dev_corpus_refs
+
+```
+
+
+Normalization: lowercase the words, remove punctuation and numbers, remove whitespace
+```{r}
+# devset refs normalize:
+dev_corpus_refs <- tolower(dev_corpus_refs)
+dev_corpus_refs <- removeNumbers(dev_corpus_refs)
+dev_corpus_refs <- removePunctuation(dev_corpus_refs)
+dev_corpus_refs <- stripWhitespace(dev_corpus_refs)
+
+# remove backslashes:
+## convert corpus to string
+toString(dev_corpus_refs)
+
+
+```
+
+
+Add <start> and <end> tokens to beginning, end of each sentence 
+```{r}
+
+
+
+```
+
+
+Replace all values in MRs with corresponding semantic name of the slot (delexicalization)
+
+
+
+
+https://datamathstat.wordpress.com/2019/10/25/text-preprocessing-for-nlp-and-machine-learning-using-r/
+```{r}
+text_corpus <- (VectorSource(devset))
+   text_corpus <- Corpus(text_corpus)
+   summary(text_corpus)
+   
+##Tokenization: Split a text into single word terms called "unigrams" 
+text_corpus_clean<-Boost_tokenizer(text_corpus)
+ # text_corpus_clean[[5]]$content
+
+#Normalization: lowercase the words and remove punctuation and numbers
+text_corpus_clean<-tm_map(text_corpus , content_transformer(tolower))
+text_corpus_clean <- tm_map(text_corpus_clean, removePunctuation)
+text_corpus_clean <- tm_map(text_corpus_clean, removeNumbers)
+text_corpus_clean <- tm_map(text_corpus_clean, stripWhitespace)
+
+##Remove stopwords and custom stopwords
+text_corpus_clean <- c(stopwords('english'), "a", "b") 
+
+
+
+```
+
+
+
+
+
+Turn data into a corpus for text processing
+```{r}
+
+#devset corpus:
+devset_corpus <- corpus(devset, text_field = "ref")
+print(devset_corpus)
+summary(devset_corpus, 10)
+
+
+```
+
+Tokenization of devset
+```{r}
+devset_corpus_tok <- tokenize_words(devset_corpus)
+devset_corpus_clean <- devset_corpus_tok
+
+devset_corpus_clean
+```
+
+Normalize devset
+  + all lower case
+  + remove punctuation, numbers, white spaces
+  + remove stop words, sparce terms
+```{r}
+# devset_corpus_clean <- tolower(devset_corpus_clean)
+devset_corpus_clean <- removePunctuation(devset_corpus_clean)
+devset_corpus_clean <- removeNumbers(devset_corpus_clean)
+devset_corpus_clean <- stripWhitespace(devset_corpus_clean)
+devset_corpus_clean <- removeWords(devset_corpus_clean, stopwords('en'))
+```
+
+
+Visualize the pre-processed data
+```{r}
+dtm <- DocumentTermMatrix(devset_corpus_clean)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
